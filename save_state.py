@@ -53,6 +53,9 @@ class SaveState(object):
       if save.active and save.map_name == map_name:
         return save
 
+  def all_saves_for_mname(self, map_name):
+    return [save for save in self.state if save.map_name == map_name]
+
   def chdir(self, dir_string):
     os.chdir(dir_string)
 

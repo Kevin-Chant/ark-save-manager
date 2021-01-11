@@ -14,6 +14,9 @@ class SaveManager(object):
     print(self.save_state)
     print("------------")
 
+  def get_save_list_for_mname(self, map_name):
+    return self.save_state.all_saves_for_mname(map_name)
+
   def import_save(self, folder_name, params_dict):
     if not self.folder_exists(folder_name):
       raise Exception("Cannot import a nonexistent save")
