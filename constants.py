@@ -1,9 +1,9 @@
-MAP_NAMES = ["The Island", "Genesis: Part 1", "Scorched Earth", "Abberation", "Extinction", "The Center", "Ragnarok", "Valguero", "Crystal Isles"]
+MAP_NAMES = ["The Island", "Genesis: Part 1", "Scorched Earth", "Aberration", "Extinction", "The Center", "Ragnarok", "Valguero", "Crystal Isles"]
 MAP_FOLDER_NAMES = {
   "The Island": "SavedArksLocal",
   "Genesis: Part 1": "", # TODO
   "Scorched Earth": "ScorchedEarth_PSavedArksLocal",
-  "Abberation": "Abberation_PSavedArksLocal",
+  "Aberration": "Aberration_PSavedArksLocal",
   "Extinction": "", # TODO
   "The Center": "", # TODO
   "Ragnarok": "RagnarokSavedArksLocal",
@@ -11,4 +11,16 @@ MAP_FOLDER_NAMES = {
   "Crystal Isles": "CrystalIslesSavedArksLocal",
 }
 FOLDER_MAP_NAMES = {folder_name: map_name for map_name, folder_name in MAP_FOLDER_NAMES.items()}
+MAP_ARK_FILE_NAMES = {
+  "The Island": "TheIsland.ark",
+  "Genesis: Part 1": "", # TODO
+  "Scorched Earth": "ScorchedEarth_P.ark",
+  "Aberration": "Aberration_P.ark",
+  "Extinction": "", # TODO
+  "The Center": "", # TODO
+  "Ragnarok": "Ragnarok.ark",
+  "Valguero": "", # TODO
+  "Crystal Isles": "CrystalIsles.ark",
+}
 STATE_FILE = ".arksavemanager"
+SAVE_DIR_FILENAME = ".arksavemanagerdir"
