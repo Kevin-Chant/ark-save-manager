@@ -86,6 +86,8 @@ class CmdGui(object):
     save_obj = self.selected_save_obj()
     func_call = f"self.{func_name}(save_obj)"
     eval(func_call)
+    self.ui_state["choosing_action"] = False
+    self.ui_state["highlighted_action"] = None
 
   def handle_set_save_dir(self):
     save_dir = prompt_for_save_dir()
