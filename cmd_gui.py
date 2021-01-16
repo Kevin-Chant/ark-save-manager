@@ -2,11 +2,14 @@ import keyboard, sys, time, os, math
 from save_manager import SaveManager
 from constants import *
 from gui_helpers import *
+import tkinter as tk
+from tkinter import font
 
 class CmdGui(object):
   def __init__(self):
+    self.root = tk.Tk()
+    self.display_buffer = tk.StringVar()
     self.save_manager = SaveManager()
-    # TODO: set save directory based on input
     save_dir = load_save_dir_from_file()
     if save_dir is not None:
       self.save_manager.set_save_dir(save_dir)
@@ -137,26 +140,21 @@ class CmdGui(object):
       next_index = wrap_index(curr_save_index + offset, save_name_list)
       self.ui_state["highlighted_save_indices"][self.highlighted_map()] = next_index
 
-  def clear_terminal(self):
-    os.system('clear')
-
-  def print_header(self):
+  def display_header(self):
     title = "Ark Save Management"
-    print("")
-    print(" " * math.floor((TOTAL_TERMINAL_SIZE - len(title)) / 2) + title + " " * math.ceil((TOTAL_TERMINAL_SIZE - len(title)) / 2))
-    print("")
-    print("Use Up/Down/Left/Right to move your selection")
-    print("Press Enter to take an action on your current selection")
-    print("-" * TOTAL_TERMINAL_SIZE)
+    lines = [
+      "",
+      " " * math.floor((TOTAL_TERMINAL_SIZE - len(title)) / 2) + title + " " * math.ceil((TOTAL_TERMINAL_SIZE - len(title)) / 2),
+      "",
+      "Use Up/Down/Left/Right to move your selection",
+      "Press Enter to take an action on your current selection",
+      "-" * TOTAL_TERMINAL_SIZE,
+      "",
+    ]
 
-  def get_map_name(self, i, no_highlight=False):
-    name = MAP_NAMES[i]
-    if not no_highlight and name == self.highlighted_map():
-      return highlight(name, self.selected_pane() == "map" and not self.choosing_action())
-    else:
-      return name
+    return "\n".join(lines)
 
-  def get_save_name(self, i, no_highlight=False):
+  def get_save_name(self, i):
     save_list = self.selected_save_list()
     if i >= len(save_list):
       return ""
@@ -164,62 +162,117 @@ class CmdGui(object):
     name = save_list[i].name
     if name is None:
       name = "Unnamed Save"
-    if not no_highlight:
-      if self.active_save_obj() == save_list[i]:
-        name = active(name)
-      if i == self.highlighted_save_index():
-        name = highlight(name, self.selected_pane() == "save" and not self.choosing_action())
-      return name
-    else:
-      return name
+    return name
 
-  def print_main_section(self):
+  def display_main_section(self):
+    lines = []
     for i in range(NUM_ROWS):
-      row_to_print=""
-      row_to_print += "|" + " " * (LEFT_BORDER_WIDTH-1)
-      row_to_print += self.get_map_name(i) + " " * (MAX_MAP_NAME_WIDTH - len(self.get_map_name(i, True)))
-      row_to_print += " " * (RIGHT_BORDER_WIDTH-1) + "|"
-      row_to_print += " " * MIDDLE_PADDING_WIDTH
-      row_to_print += "|" + " " * (LEFT_BORDER_WIDTH-1)
-      row_to_print += self.get_save_name(i) + " " * (MAX_SAVE_NAME_WIDTH - len(self.get_save_name(i, True)))
-      row_to_print += " " * (RIGHT_BORDER_WIDTH-1) + "|"
-      print(row_to_print)
+      map_name = MAP_NAMES[i]
+      save_name = self.get_save_name(i)
+      if save_name != "" and self.active_save_obj() == self.selected_save_list()[i]:
+        save_name = f"<{save_name}>"
+      row_to_display=""
+      row_to_display += "|" + " " * (LEFT_BORDER_WIDTH-1)
+      if map_name == self.highlighted_map():
+        if self.selected_pane()=="map":
+          row_to_display += "> " + map_name + " " * (MAX_MAP_NAME_WIDTH - len(map_name) - 2)
+        else:
+          row_to_display += "*" + map_name + " " * (MAX_MAP_NAME_WIDTH - len(map_name) - 1)
+      else:
+        row_to_display += map_name + " " * (MAX_MAP_NAME_WIDTH - len(map_name))
+      row_to_display += " " * (RIGHT_BORDER_WIDTH-1) + "|"
+      row_to_display += " " * MIDDLE_PADDING_WIDTH
+      row_to_display += "|" + " " * (LEFT_BORDER_WIDTH-1)
+      if i == self.highlighted_save_index() and self.selected_pane()=="save":
+        row_to_display += "> " + save_name + " " * (MAX_SAVE_NAME_WIDTH - len(save_name) - 2)
+      else:
+        row_to_display += save_name + " " * (MAX_SAVE_NAME_WIDTH - len(save_name))
+      row_to_display += " " * (RIGHT_BORDER_WIDTH-1) + "|"
+      lines.append(row_to_display)
+    lines.append("")
+
+    return "\n".join(lines)
 
 
-  def print_footer(self):
-    print("-" * TOTAL_TERMINAL_SIZE)
+  def display_footer(self):
+    lines = ["-" * TOTAL_TERMINAL_SIZE]
     for action in self.currently_valid_actions():
       if action == self.highlighted_action():
-        print(highlight(action_text(action, self.choosing_action())))
+        lines.append("> " + action)
       else:
-        print(action_text(action, self.choosing_action()))
-    return
+        lines.append(action)
+    lines.append("")
+    return "\n".join(lines)
 
   def print_debug(self):
-    print("DEBUG")
+    os.system("clear")
     print(self.ui_state)
+    sys.stdout.flush()
 
-  def print_setup_prompt(self):
-    print(highlight("Please select the 'Saved' folder found in your Ark installation."))
-    print("(Press Enter to open the file dialog)")
+  def display_setup_prompt(self):
+    lines = [
+      highlight("Please select the 'Saved' folder found in your Ark installation."),
+      "(Press Enter to open the file dialog)",
+      "",
+    ]
+    return "\n".join(lines)
 
   def render_setup(self):
-    self.clear_terminal()
-    self.print_header()
-    self.print_setup_prompt()
+    new_display = ""
+    new_display += self.display_header()
+    new_display += self.display_setup_prompt()
+    self.display_buffer.set(new_display)
+
     self.print_debug()
-    sys.stdout.flush()
 
   def render(self):
     if self.in_setup():
       return self.render_setup()
 
-    self.clear_terminal()
-    self.print_header()
-    self.print_main_section()
-    self.print_footer()
+    new_display = ""
+    new_display += self.display_header()
+    new_display += self.display_main_section()
+    new_display += self.display_footer()
+    self.display_buffer.set(new_display)
+
     self.print_debug()
-    sys.stdout.flush()
+
+  def on_keypress(self, key):
+    if self.in_setup():
+      if key == 'enter':
+        self.handle_set_save_dir()
+    else:
+      if key == 'down':
+        self.move_highlight(1)
+      if key == 'up':
+        self.move_highlight(-1)
+
+      if self.choosing_action():
+        if key == 'esc':
+          self.set_choosing_action(False)
+        if key == 'enter':
+          self.handle_current_action()
+      else:
+        if key == 'left':
+          self.set_active_pane('map')
+        if key == 'right':
+          self.set_active_pane('save')
+        if key == 'enter':
+          self.set_choosing_action(True)
+
+    self.render()
+    return
+
+  def connect_key_listeners(self):
+    callback = lambda key_event: self.on_keypress(key_event.name)
+    keyboard.on_press(callback)
+
+  def main_loop(self):
+    self.connect_key_listeners()
+    monospaced_font = font.Font(family='Consolas', size=12)
+    tk.Label(self.root, justify=tk.LEFT, textvariable=self.display_buffer, font=monospaced_font).pack()
+    self.render()
+    self.root.mainloop()
 
   def main_menu_loop(self):
     exit = False
@@ -261,4 +314,5 @@ class CmdGui(object):
 
 if __name__ == "__main__":
   gui = CmdGui()
-  gui.main_menu_loop()
+  # gui.main_menu_loop()
+  gui.main_loop()
