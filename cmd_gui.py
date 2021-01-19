@@ -8,7 +8,8 @@ from tkinter import font
 class CmdGui(object):
   def __init__(self):
     self.root = tk.Tk()
-    self.display_buffer = tk.StringVar()
+    self.font = font.Font(family='Consolas', size=12, weight=font.NORMAL)
+    self.bold_font = font.Font(family='Consolas', size=12, weight=font.BOLD)
     self.save_manager = SaveManager()
     save_dir = load_save_dir_from_file()
     if save_dir is not None:
@@ -18,11 +19,9 @@ class CmdGui(object):
       run_setup = True
     self.ui_state = {
       "in_setup": run_setup,
-      "choosing_action": False,
-      "selected_pane": "map",
       "highlighted_map": "The Island",
-      "highlighted_save_indices": {},
-      "highlighted_action": None,
+      "highlighted_save_index": None,
+      "save_list_scroll_offset": 0,
     }
 
   def import_save(self, _curr_save_obj):
@@ -37,15 +36,15 @@ class CmdGui(object):
     params_dict = {"map_name": map_name, "active": active}
     self.save_manager.import_save(save_folder_path, params_dict)
 
-  def activate_save(self, curr_save_obj):
-    self.save_manager.activate_save(curr_save_obj.uuid)
+  def activate_save(self, save_obj):
+    self.save_manager.activate_save(save_obj.uuid)
 
-  def deactivate_save(self, curr_save_obj):
-    self.save_manager.deactivate_save(curr_save_obj.uuid)
+  def deactivate_save(self, save_obj):
+    self.save_manager.deactivate_save(save_obj.uuid)
 
-  def rename_save(self, curr_save_obj):
+  def rename_save(self, save_obj):
     new_name = prompt_for_new_name()
-    self.save_manager.rename(curr_save_obj.uuid, new_name)
+    self.save_manager.rename(save_obj.uuid, new_name)
 
   def active_save_obj(self):
     return self.save_manager.active_save_for_mname(self.highlighted_map())
@@ -63,256 +62,180 @@ class CmdGui(object):
   def in_setup(self):
     return self.ui_state["in_setup"]
 
-  def choosing_action(self):
-    return self.ui_state["choosing_action"]
-
-  def selected_pane(self):
-    return self.ui_state["selected_pane"]
-
   def highlighted_map(self):
     return self.ui_state["highlighted_map"]
 
   def highlighted_save_index(self):
-    return self.ui_state["highlighted_save_indices"].get(self.highlighted_map(), None)
+    return self.ui_state["highlighted_save_index"]
 
-  def highlighted_action(self):
-    return self.ui_state["highlighted_action"]
-
-  def currently_valid_actions(self):
-    curr_save = self.selected_save_obj()
-    if curr_save is None:
-      return []
-    return valid_actions_for_save_obj(curr_save)
-
-  def handle_current_action(self):
-    func_name = fx_name_for_action(self.highlighted_action())
-    save_obj = self.selected_save_obj()
-    func_call = f"self.{func_name}(save_obj)"
-    eval(func_call)
-    self.ui_state["choosing_action"] = False
-    self.ui_state["highlighted_action"] = None
-
-  def handle_set_save_dir(self):
-    save_dir = prompt_for_save_dir()
-    self.save_manager.set_save_dir(save_dir)
-    self.ui_state["in_setup"] = False
-
-  def set_choosing_action(self, is_choosing):
-    if is_choosing:
-      actions = self.currently_valid_actions()
-      # Don't allow action selection unless there are valid actions
-      if self.selected_pane() != "save" or len(actions) == 0:
-        return
-      self.ui_state["highlighted_action"] = actions[0]
-    else:
-      self.ui_state["highlighted_action"] = None
-
-    self.ui_state["choosing_action"] = is_choosing
-
-  def set_active_pane(self, pane):
-    if pane == "save" and self.highlighted_save_index() == None:
-      save_list = self.selected_save_list()
-      if len(save_list) > 0:
-        self.ui_state["highlighted_save_indices"][self.highlighted_map()] = 0
-      else:
-        # Point back to map if there's no saves to be selected
-        pane = "map"
-    self.ui_state["selected_pane"] = pane
-
-
-  def move_highlight(self, offset):
-    if self.choosing_action():
-      action_list = self.currently_valid_actions()
-      curr_action_index = action_list.index(self.highlighted_action())
-      next_index = wrap_index(curr_action_index + offset, action_list)
-      self.ui_state["highlighted_action"] = action_list[next_index]
-    elif self.selected_pane() == "map":
-      curr_map_index = MAP_NAMES.index(self.highlighted_map())
-      next_index = wrap_index(curr_map_index + offset, MAP_NAMES)
-      self.ui_state["highlighted_map"] = MAP_NAMES[next_index]
-    else:
-      save_list = self.selected_save_list()
-      # No saves to select
-      if len(save_list) == 0:
-        return
-      save_name_list = [save.name for save in save_list]
-      curr_save_index = self.highlighted_save_index()
-      next_index = wrap_index(curr_save_index + offset, save_name_list)
-      self.ui_state["highlighted_save_indices"][self.highlighted_map()] = next_index
-
-  def display_header(self):
-    title = "Ark Save Management"
-    lines = [
-      "",
-      " " * math.floor((TOTAL_TERMINAL_SIZE - len(title)) / 2) + title + " " * math.ceil((TOTAL_TERMINAL_SIZE - len(title)) / 2),
-      "",
-      "Use Up/Down/Left/Right to move your selection",
-      "Press Enter to take an action on your current selection",
-      "-" * TOTAL_TERMINAL_SIZE,
-      "",
-    ]
-
-    return "\n".join(lines)
-
-  def get_save_name(self, i):
-    save_list = self.selected_save_list()
-    if i >= len(save_list):
-      return ""
-
-    name = save_list[i].name
-    if name is None:
-      name = "Unnamed Save"
-    return name
-
-  def display_main_section(self):
-    lines = []
-    for i in range(NUM_ROWS):
-      map_name = MAP_NAMES[i]
-      save_name = self.get_save_name(i)
-      if save_name != "" and self.active_save_obj() == self.selected_save_list()[i]:
-        save_name = f"<{save_name}>"
-      row_to_display=""
-      row_to_display += "|" + " " * (LEFT_BORDER_WIDTH-1)
-      if map_name == self.highlighted_map():
-        if self.selected_pane()=="map":
-          row_to_display += "> " + map_name + " " * (MAX_MAP_NAME_WIDTH - len(map_name) - 2)
-        else:
-          row_to_display += "*" + map_name + " " * (MAX_MAP_NAME_WIDTH - len(map_name) - 1)
-      else:
-        row_to_display += map_name + " " * (MAX_MAP_NAME_WIDTH - len(map_name))
-      row_to_display += " " * (RIGHT_BORDER_WIDTH-1) + "|"
-      row_to_display += " " * MIDDLE_PADDING_WIDTH
-      row_to_display += "|" + " " * (LEFT_BORDER_WIDTH-1)
-      if i == self.highlighted_save_index() and self.selected_pane()=="save":
-        row_to_display += "> " + save_name + " " * (MAX_SAVE_NAME_WIDTH - len(save_name) - 2)
-      else:
-        row_to_display += save_name + " " * (MAX_SAVE_NAME_WIDTH - len(save_name))
-      row_to_display += " " * (RIGHT_BORDER_WIDTH-1) + "|"
-      lines.append(row_to_display)
-    lines.append("")
-
-    return "\n".join(lines)
-
-
-  def display_footer(self):
-    lines = ["-" * TOTAL_TERMINAL_SIZE]
-    for action in self.currently_valid_actions():
-      if action == self.highlighted_action():
-        lines.append("> " + action)
-      else:
-        lines.append(action)
-    lines.append("")
-    return "\n".join(lines)
+  def save_list_scroll_offset(self):
+    return self.ui_state["save_list_scroll_offset"]
 
   def print_debug(self):
     os.system("clear")
     print(self.ui_state)
     sys.stdout.flush()
 
-  def display_setup_prompt(self):
-    lines = [
-      highlight("Please select the 'Saved' folder found in your Ark installation."),
-      "(Press Enter to open the file dialog)",
-      "",
-    ]
-    return "\n".join(lines)
-
-  def render_setup(self):
-    new_display = ""
-    new_display += self.display_header()
-    new_display += self.display_setup_prompt()
-    self.display_buffer.set(new_display)
-
-    self.print_debug()
-
-  def render(self):
-    if self.in_setup():
-      return self.render_setup()
-
-    new_display = ""
-    new_display += self.display_header()
-    new_display += self.display_main_section()
-    new_display += self.display_footer()
-    self.display_buffer.set(new_display)
-
-    self.print_debug()
-
-  def on_keypress(self, key):
-    if self.in_setup():
-      if key == 'enter':
-        self.handle_set_save_dir()
-    else:
-      if key == 'down':
-        self.move_highlight(1)
-      if key == 'up':
-        self.move_highlight(-1)
-
-      if self.choosing_action():
-        if key == 'esc':
-          self.set_choosing_action(False)
-        if key == 'enter':
-          self.handle_current_action()
+  def update_maps(self):
+    for map_label in self.map_labels:
+      if map_label['text'] == self.highlighted_map():
+        map_label.configure(font=self.bold_font)
       else:
-        if key == 'left':
-          self.set_active_pane('map')
-        if key == 'right':
-          self.set_active_pane('save')
-        if key == 'enter':
-          self.set_choosing_action(True)
+        map_label.configure(font=self.font)
 
-    self.render()
+  def update_saves(self):
+    [text_var.set("") for text_var in self.save_text_vars]
+
+    save_list = self.selected_save_list()
+    offset = self.save_list_scroll_offset()
+    highlighted_save_index = self.highlighted_save_index()
+
+    for i, save_obj in enumerate(save_list[offset:offset+NUM_ROWS]):
+      self.save_text_vars[i].set(save_obj.name or "Unnamed Save")
+      if save_obj.active:
+        self.save_labels[i].configure(fg="cyan")
+      else:
+        self.save_labels[i].configure(fg="black")
+    for i in range(NUM_ROWS):
+      if i - offset == highlighted_save_index:
+        self.save_labels[i].configure(bg="red")
+      else:
+        self.save_labels[i].configure(bg="white")
+
+  def update_actions(self):
+    if self.selected_save_obj() is None:
+      self.action_buttons[1].configure(state="disabled")
+      self.action_buttons[2].configure(state="disabled")
+    else:
+      self.action_buttons[1].configure(state="normal")
+      self.action_buttons[2].configure(state="normal")
+      if self.selected_save_obj().active:
+        self.action_buttons[2]['command'] = self.handle_deactivate_save
+        self.button_text_var.set("Deactivate Save")
+      else:
+        self.action_buttons[2]['command'] = self.handle_activate_save
+        self.button_text_var.set("Activate Save")
+
+  def handle_prompt_for_save_dir(self):
+    prompt_for_save_dir(self.root)
+    self.save_manager.set_save_dir(dirpath)
+    self.ui_state["in_setup"] = False
+
+    self.setup_frame.destroy()
+    self.initial_render()
+
+  def select_map(self, map_index):
+    self.ui_state["highlighted_map"] = MAP_NAMES[map_index]
+    self.ui_state["highlighted_save_index"] = None
+
+    self.print_debug()
+
+    self.update_maps()
+    self.update_saves()
+    self.update_actions()
+
+  def select_save(self, save_index):
+    if save_index >= len(self.selected_save_list()):
+      return
+
+    self.ui_state["highlighted_save_index"] = save_index
+
+    self.update_saves()
+    self.update_actions()
+
+  def handle_import_save(self):
+    title = "Select the save you'd like to import."
+    dirpath = filedialog.askdirectory(title=title, parent=self.root)
+    # TODO
     return
 
-  def connect_key_listeners(self):
-    callback = lambda key_event: self.on_keypress(key_event.name)
-    keyboard.on_press(callback)
+  def handle_rename_save(self):
+    return
+
+  def handle_activate_save(self):
+    self.activate_save(self.selected_save_obj())
+
+    self.update_saves()
+    self.update_actions()
+
+  def handle_deactivate_save(self):
+    self.deactivate_save(self.selected_save_obj())
+
+    self.update_saves()
+    self.update_actions()
+
+  def set_up_header(self):
+    self.header_frame = tk.Frame(self.root)
+    self.header_frame.configure(background="green")
+    self.header_frame.grid(row=0, column=0, columnspan=3)
+    self.header_label = tk.Label(self.header_frame, text="Ark Save Management", font=(None, 16))
+    self.header_label.pack()
+
+  def set_up_map_column(self):
+    self.map_frame = tk.Frame(self.root)
+    self.map_frame.configure(background="black")
+    self.map_frame.grid(row=1, column=0)
+    self.map_labels = [tk.Label(self.map_frame, text=MAP_NAMES[i], font=self.font) for i in range(NUM_ROWS)]
+    for i, label in enumerate(self.map_labels):
+      label.bind("<Button-1>", lambda event,i=i: self.select_map(i))
+      label.pack()
+
+  def set_up_save_column(self):
+    self.save_frame = tk.Frame(self.root)
+    self.save_frame.configure(background="blue")
+    self.save_frame.grid(row=1, column=1)
+    self.save_text_vars = [tk.StringVar() for i in range(NUM_ROWS)]
+    self.save_labels = [tk.Label(self.save_frame, textvariable=text_var, font=self.font) for text_var in self.save_text_vars]
+    for i, label in enumerate(self.save_labels):
+      label.bind("<Button-1>", lambda event,i=i: self.select_save(i))
+      label.pack()
+
+  def set_up_action_column(self):
+    self.action_frame = tk.Frame(self.root)
+    self.action_frame.configure(background="red")
+    self.action_frame.grid(row=1, column=2)
+
+    import_button = tk.Button(self.action_frame, text="Import Save", command=lambda: self.handle_import_save())
+    rename_button = tk.Button(self.action_frame, text="Rename Save", command=lambda: self.handle_rename_save())
+
+    self.button_text_var = tk.StringVar()
+    self.button_text_var.set("Activate Save")
+    activate_button = tk.Button(self.action_frame, textvariable=self.button_text_var, command=lambda: self.handle_activate_save())
+    activate_button.configure(state="disabled")
+
+    self.action_buttons = [import_button, rename_button, activate_button]
+    [button.pack() for button in self.action_buttons]
+
+  def render_setup(self):
+    self.root.configure(background="white")
+    self.root.geometry("200x200")
+    self.setup_frame = tk.Frame(self.root)
+    tk.Label(self.setup_frame, text="To run this helper you must select your Ark save directory").pack()
+    tk.Label(self.setup_frame, text="This is usually found in steamapps/common/ARK/ShooterGame/Saved").pack()
+
+    tk.Button(self.setup_frame, text="Select Saved Directory", command=lambda: self.handle_prompt_for_save_dir).pack()
+
+
+  def initial_render(self):
+    self.root.configure(background="turquoise")
+    self.root.grid_columnconfigure(0, weight=2)
+    self.root.grid_columnconfigure(1, weight=2)
+    self.root.grid_columnconfigure(2, weight=1)
+    self.root.geometry("800x600")
+
+    self.set_up_header()
+    self.set_up_map_column()
+    self.set_up_save_column()
+    self.set_up_action_column()
+    self.select_map(0)
 
   def main_loop(self):
-    self.connect_key_listeners()
-    monospaced_font = font.Font(family='Consolas', size=12)
-    tk.Label(self.root, justify=tk.LEFT, textvariable=self.display_buffer, font=monospaced_font).pack()
-    self.render()
+    if self.in_setup():
+      self.render_setup()
+    else:
+      self.initial_render()
     self.root.mainloop()
-
-  def main_menu_loop(self):
-    exit = False
-    while exit is False:
-      self.render()
-      time.sleep(0.10)
-      while True:
-        if self.in_setup():
-          if keyboard.is_pressed('enter'):
-            self.handle_set_save_dir()
-            break
-        else:
-          if keyboard.is_pressed('down'):
-            self.move_highlight(1)
-            break
-          if keyboard.is_pressed('up'):
-            self.move_highlight(-1)
-            break
-
-          if self.choosing_action():
-            if keyboard.is_pressed('escape'):
-              self.set_choosing_action(False)
-              break
-            if keyboard.is_pressed('enter'):
-              self.handle_current_action()
-              break
-          else:
-            if keyboard.is_pressed('left'):
-              self.set_active_pane('map')
-              break
-            if keyboard.is_pressed('right'):
-              self.set_active_pane('save')
-              break
-            if keyboard.is_pressed('enter'):
-              self.set_choosing_action(True)
-              break
-        time.sleep(0.05)
-
 
 if __name__ == "__main__":
   gui = CmdGui()
-  # gui.main_menu_loop()
   gui.main_loop()
