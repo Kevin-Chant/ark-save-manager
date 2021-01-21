@@ -24,8 +24,12 @@ class CmdGui(object):
       "save_list_scroll_offset": 0,
     }
 
-  def import_save(self, _curr_save_obj):
-    save_folder_path = prompt_for_save_to_import()
+  def import_save(self):
+    save_folder_path = prompt_for_save_to_import(self.root)
+    # Early return if the user didn't select a folder
+    if save_folder_path == '':
+      return None
+
     save_folder_name = save_folder_path.split("/")[-1]
     if save_folder_name in FOLDER_MAP_NAMES.keys():
       map_name = FOLDER_MAP_NAMES[save_folder_name]
@@ -34,7 +38,7 @@ class CmdGui(object):
       map_name = infer_map_name_from_save_folder(save_folder_path)
       active = False
     params_dict = {"map_name": map_name, "active": active}
-    self.save_manager.import_save(save_folder_path, params_dict)
+    return self.save_manager.import_save(save_folder_name, params_dict)
 
   def activate_save(self, save_obj):
     self.save_manager.activate_save(save_obj.uuid)
@@ -43,8 +47,8 @@ class CmdGui(object):
     self.save_manager.deactivate_save(save_obj.uuid)
 
   def rename_save(self, save_obj):
-    new_name = prompt_for_new_name()
-    self.save_manager.rename(save_obj.uuid, new_name)
+    new_name = prompt_for_new_name(self.root)
+    self.save_manager.rename_save(save_obj.uuid, new_name)
 
   def active_save_obj(self):
     return self.save_manager.active_save_for_mname(self.highlighted_map())
@@ -144,13 +148,20 @@ class CmdGui(object):
     self.update_actions()
 
   def handle_import_save(self):
-    title = "Select the save you'd like to import."
-    dirpath = filedialog.askdirectory(title=title, parent=self.root)
-    # TODO
-    return
+    imported_save = self.import_save()
+    if imported_save is not None:
+      self.ui_state["highlighted_map"] = imported_save.map_name
+      self.ui_state["highlighted_save_index"] = self.selected_save_list().index(imported_save)
+
+    self.update_maps()
+    self.update_saves()
+    self.update_actions()
 
   def handle_rename_save(self):
-    return
+    self.rename_save(self.selected_save_obj())
+
+    self.update_saves()
+    self.update_actions()
 
   def handle_activate_save(self):
     self.activate_save(self.selected_save_obj())

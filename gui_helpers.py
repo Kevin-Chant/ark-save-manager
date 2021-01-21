@@ -1,6 +1,6 @@
 import os
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, simpledialog
 from colorama import Fore, Back, Style
 from constants import *
 
@@ -34,6 +34,14 @@ def prompt_for_save_dir(root):
   write_save_dir_to_file(dirpath)
   return dirpath
 
+def prompt_for_save_to_import(root):
+  title = "Select the save to be imported"
+  dirpath = filedialog.askdirectory(title=title, parent=root)
+  return dirpath
+
+def prompt_for_new_name(root):
+  return simpledialog.askstring("Ark Save Manager", "Choose a new name for the save")
+
 def write_save_dir_to_file(dirpath):
   with open(SAVE_DIR_FILENAME, 'w') as f:
     f.write(dirpath)
@@ -57,6 +65,9 @@ def wrap_index(i, l):
   return i
 
 def infer_map_name_from_save_folder(save_folder_path):
-  for map_name, ark_file_name in MAP_ARK_FILE_NAMES:
+  for map_name, ark_file_name in MAP_ARK_FILE_NAMES.items():
+    # TODO: remove this after populating the constant fully
+    if ark_file_name == "":
+      continue
     if os.path.exists(os.path.join(save_folder_path, ark_file_name)):
       return map_name
