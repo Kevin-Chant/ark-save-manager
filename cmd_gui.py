@@ -218,12 +218,13 @@ class CmdGui(object):
 
   def render_setup(self):
     self.root.configure(background=COLORS["background"])
-    self.root.geometry("200x200")
-    self.setup_frame = tk.Frame(self.root)
-    tk.Label(self.setup_frame, text="To run this helper you must select your Ark save directory").pack()
-    tk.Label(self.setup_frame, text="This is usually found in steamapps/common/ARK/ShooterGame/Saved").pack()
+    self.root.geometry("700x120")
+    self.setup_frame = tk.Frame(self.root, bg=COLORS["background"])
+    self.setup_frame.pack()
+    tk.Label(self.setup_frame, text="To run this helper you must select your Ark save directory", font=(None, 20), bg=COLORS["secondary"]).pack(fill="x")
+    tk.Label(self.setup_frame, text="This is usually found in steamapps/common/ARK/ShooterGame/Saved", font=(None, 16), bg=COLORS["secondary"]).pack(fill="x")
 
-    tk.Button(self.setup_frame, text="Select Saved Directory", command=lambda: self.handle_prompt_for_save_dir).pack()
+    tk.Button(self.setup_frame, text="Select Saved Directory", font=(None, 14), command=lambda: self.handle_prompt_for_save_dir(), bg=COLORS["primary"]).pack()
 
 
   def initial_render(self):
