@@ -24,3 +24,4 @@ MAP_ARK_FILE_NAMES = {
 }
 STATE_FILE = ".arksavemanager"
 SAVE_DIR_FILENAME = ".arksavemanagerdir"
+COLORS = {"primary": "#4968BB", "secondary": "#839BF4", "background": "#A8AABC", "accent": "#F5D059", "text_light": "#F8F9FF"}
