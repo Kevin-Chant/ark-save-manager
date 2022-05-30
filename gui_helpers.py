@@ -34,13 +34,13 @@ def prompt_for_save_dir(root):
   write_save_dir_to_file(dirpath)
   return dirpath
 
-def prompt_for_save_to_import(root):
+def prompt_for_save_to_import(root, initial_dir=None):
   title = "Select the save to be imported"
-  dirpath = filedialog.askdirectory(title=title, parent=root)
+  dirpath = filedialog.askdirectory(title=title, parent=root, initialdir=initial_dir)
   return dirpath
 
 def prompt_for_new_name(root):
-  return simpledialog.askstring("Ark Save Manager", "Choose a new name for the save")
+  return simpledialog.askstring("Ark Save Manager", "Choose a new name for the save", parent=root)
 
 def write_save_dir_to_file(dirpath):
   with open(SAVE_DIR_FILENAME, 'w') as f:

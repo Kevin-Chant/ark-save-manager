@@ -11,9 +11,9 @@ class CmdGui(object):
     self.font = font.Font(family='Consolas', size=12, weight=font.NORMAL)
     self.bold_font = font.Font(family='Consolas', size=12, weight=font.BOLD)
     self.save_manager = SaveManager()
-    save_dir = load_save_dir_from_file()
-    if save_dir is not None:
-      self.save_manager.set_save_dir(save_dir)
+    self.save_dir = load_save_dir_from_file()
+    if self.save_dir is not None:
+      self.save_manager.set_save_dir(self.save_dir)
       run_setup = False
     else:
       run_setup = True
@@ -25,7 +25,7 @@ class CmdGui(object):
     }
 
   def import_save(self):
-    save_folder_path = prompt_for_save_to_import(self.root)
+    save_folder_path = prompt_for_save_to_import(self.root, self.save_dir)
     # Early return if the user didn't select a folder
     if save_folder_path == '':
       return None
@@ -121,7 +121,7 @@ class CmdGui(object):
         self.button_text_var.set("Activate Save")
 
   def handle_prompt_for_save_dir(self):
-    prompt_for_save_dir(self.root)
+    dirpath = prompt_for_save_dir(self.root)
     self.save_manager.set_save_dir(dirpath)
     self.ui_state["in_setup"] = False
 
@@ -131,8 +131,6 @@ class CmdGui(object):
   def select_map(self, map_index):
     self.ui_state["highlighted_map"] = MAP_NAMES[map_index]
     self.ui_state["highlighted_save_index"] = None
-
-    self.print_debug()
 
     self.update_maps()
     self.update_saves()
