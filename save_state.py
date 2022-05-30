@@ -64,14 +64,17 @@ class SaveState(object):
       raw_dict = json.loads(f.read().strip())
       self.state = [SaveObject.from_json(j) for j in raw_dict]
 
-  def initialize_state_file(self):
+  def register_unknown_saves_to_state_file(self):
     # Read from directory for what folders exist
     all_folders = os.listdir()
     valid_folders = [fname for fname in all_folders if fname in FOLDER_MAP_NAMES]
-    # Initialize a new SaveObject for each that matches an expected name
+    # Initialize a new SaveObject for each folder that matches an expected name, as long as
+    # it isn't already represented
+    existing_active_maps = {save_obj.map_name for save_obj in self.state if save_obj.active}
     for fname in valid_folders:
-      save_obj = SaveObject(map_name=FOLDER_MAP_NAMES[fname], active=True)
-      self.register_save(save_obj)
+      if FOLDER_MAP_NAMES[fname] not in existing_active_maps:
+        save_obj = SaveObject(map_name=FOLDER_MAP_NAMES[fname], active=True)
+        self.register_save(save_obj)
 
   def save_state_file(self):
     with open(STATE_FILE, "w") as f:
@@ -83,9 +86,9 @@ class SaveState(object):
     ss.chdir(dir_string)
     try:
       ss.load_state_file()
-      # TODO: initialize anything unexpected - what if the dir changed?
-    except Exception as e:
-      ss.initialize_state_file()
+    except FileNotFoundError:
+      pass
+    ss.register_unknown_saves_to_state_file()
     return ss
 
   def __str__(self):

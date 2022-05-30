@@ -187,7 +187,7 @@ class CmdGui(object):
     self.map_labels = [tk.Label(self.map_frame, text=MAP_NAMES[i], font=self.font, borderwidth=1, relief="raised") for i in range(NUM_ROWS)]
     for i, label in enumerate(self.map_labels):
       label.bind("<Button-1>", lambda _event,i=i: self.select_map(i))
-      label.configure(background=COLORS["secondary"]) # TODO: change to secondary
+      label.configure(background=COLORS["secondary"])
       label.pack(fill="x")
 
   def set_up_save_column(self):

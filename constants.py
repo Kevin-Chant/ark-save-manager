@@ -4,7 +4,7 @@ MAP_FOLDER_NAMES = {
   "Genesis: Part 1": "", # TODO
   "Scorched Earth": "ScorchedEarth_PSavedArksLocal",
   "Aberration": "Aberration_PSavedArksLocal",
-  "Extinction": "", # TODO
+  "Extinction": "ExtinctionSavedArksLocal", # TODO
   "The Center": "", # TODO
   "Ragnarok": "RagnarokSavedArksLocal",
   "Valguero": "", # TODO
