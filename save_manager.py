@@ -23,7 +23,8 @@ class SaveManager(object):
 
     so = SaveObject.from_json(params_dict)
     self.save_state.register_save(so)
-    self.rename_folder(folder_name, so.uuid)
+    if not params_dict["active"]:
+      self.rename_folder(folder_name, so.uuid)
     return so
 
   def rename_save(self, uuid, name):
